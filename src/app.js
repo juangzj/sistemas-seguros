@@ -1,41 +1,55 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import authRoutes from './routes/authRoutes.js';
+import cookieParser from 'cookie-parser';
 import 'dotenv/config';
 
-// Configuración para obtener el directorio actual (necesario al usar módulos ES6)
+// Importación de rutas y el Middleware de protección
+import authRoutes from './routes/authRoutes.js';
+import { protectRoute } from './middlewares/authMiddleware.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// MIDDLEWARES
-// 1. Permite que Express entienda datos de formularios (URL encoded)
+// --- MIDDLEWARES ---
 app.use(express.urlencoded({ extended: true }));
-
-// 2. Permite que Express entienda JSON 
 app.use(express.json());
+app.use(cookieParser());
 
-// 3. Servir archivos estáticos (HTML, CSS, JS del cliente) desde la carpeta 'public'
-// Esto hace que si vas a http://localhost:3000/login.html, funcione automáticamente.
+// --- PROTECCIÓN DE ARCHIVOS ESPECÍFICOS ---
+
+// Esta ruta intercepta la petición al dashboard antes de que express.static la encuentre.
+// Si el token no está en Redis, el middleware redirige al login.
+app.get('/dashboard.html', protectRoute, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/dashboard.html'));
+});
+
+// --- ARCHIVOS ESTÁTICOS ---
+// Servimos el resto (login, css, js público) normalmente.
 app.use(express.static(path.join(__dirname, '../public')));
 
-// RUTAS
-// Todas las rutas definidas en authRoutes empezarán por /auth
-// Ejemplo: POST /auth/login
+
+// --- RUTAS DE API ---
 app.use('/auth', authRoutes);
 
-// Ruta base para redirigir al login si entras a la raíz
+// Redirección inicial
 app.get('/', (req, res) => {
     res.redirect('/login.html');
 });
 
-// INICIAR SERVIDOR
+// Manejo de errores 404
+app.use((req, res) => {
+    res.status(404).send('Archivo no encontrado');
+});
+
+// --- INICIAR SERVIDOR ---
 app.listen(PORT, () => {
-    console.log(`-----------------------------------------`);
-    console.log(`🚀 Servidor corriendo en: http://localhost:${PORT}`);
-    console.log(`⚠️  ADVERTENCIA: Aplicación vulnerable para pruebas.`);
-    console.log(`-----------------------------------------`);
+    console.log(`-------------------------------------------------`);
+    console.log(`🚀 Servidor iniciado con éxito`);
+    console.log(`🌍 URL: http://localhost:${PORT}`);
+    console.log(`🛡️  Ruta Protegida: /dashboard.html (vía Redis)`);
+    console.log(`-------------------------------------------------`);
 });

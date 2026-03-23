@@ -61,5 +61,6 @@ temp/
 # Node REPL history
 .node_repl_history
 
-# persistencias de base de datos
+# postgres - redis
 postgres_data/
+redis_data/
