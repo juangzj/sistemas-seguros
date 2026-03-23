@@ -47,5 +47,18 @@ keys *
 # borrar tokens 
 DEL "2737b447-6d9c-4318-ab90-451653395005" 
 
+# borrar usuarios
+
+DEL "users:all"
+
+
+# borrar todo de redis
+FLUSHALL
+
+# Ver tiempo de expiracion 
+TTL "users:all"
+
+# ver los usaurios 
+KEYS "users:all"
 
 ```

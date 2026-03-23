@@ -1,6 +1,6 @@
 import * as UserModel from '../models/userModel.js';
-import redisClient from '../config/redis.js'; // Necesitarás crear este archivo
-import { v4 as uuidv4 } from 'uuid'; // Para generar tokens únicos
+import redisClient from '../config/redis.js'; 
+import { v4 as uuidv4 } from 'uuid'; 
 
 export const login = async (req, res) => {
     const { username, password } = req.body;
@@ -11,16 +11,13 @@ export const login = async (req, res) => {
         }
 
         const user = results[0];
-        const token = uuidv4(); // Generamos un token aleatorio
+        const token = uuidv4(); 
 
         try {
-            // Guardamos en Redis: Key = token, Value = ID del usuario
-            // EX 3600 hace que el token expire en 1 hora (3600 segundos)
             await redisClient.set(token, user.id.toString(), {
                 EX: 3600
             });
 
-            // Enviamos el token al cliente (puedes usar cookies o respuesta JSON)
             res.cookie('session_token', token, { httpOnly: true });
             res.redirect('/dashboard.html');
         } catch (redisErr) {
@@ -32,11 +29,13 @@ export const login = async (req, res) => {
 
 export const register = (req, res) => {
     const { username, password } = req.body;
-    UserModel.createUser(username, password, (err) => {
+    UserModel.createUser(username, password, async (err) => {
         if (err) {
             console.error("DETALLE DEL ERROR:", err); 
             return res.status(500).send("Error al registrar");
         }
+        // Invalida el caché de la lista al registrar un nuevo usuario
+        await redisClient.del('users:all');
         res.send("<script>alert('Registrado con éxito'); window.location='/login.html';</script>");
     });
 };
@@ -44,17 +43,32 @@ export const register = (req, res) => {
 export const logout = async (req, res) => {
     const token = req.cookies?.session_token;
     if (token) {
-        await redisClient.del(token); // Borramos la sesión de Redis
+        await redisClient.del(token); 
     }
     res.clearCookie('session_token');
     res.redirect('/login.html');
 };
 
-export const listUsers = (req, res) => {
-    UserModel.getAllUsers((err, results) => {
-        if (err) return res.status(500).json({ error: "Error" });
-        res.json(results);
-    });
+// Implementación de Caché para demostrar velocidad
+export const listUsers = async (req, res) => {
+    const cacheKey = 'users:all';
+
+    try {
+        const cachedUsers = await redisClient.get(cacheKey);
+        if (cachedUsers) {
+            return res.json({ source: 'Redis (Cache)', data: JSON.parse(cachedUsers) });
+        }
+
+        UserModel.getAllUsers(async (err, results) => {
+            if (err) return res.status(500).json({ error: "Error" });
+            
+            // Guardamos en caché por 60 segundos
+            await redisClient.set(cacheKey, JSON.stringify(results), { EX: 60 });
+            res.json({ source: 'PostgreSQL (DB)', data: results });
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
 export const findUsers = (req, res) => {
