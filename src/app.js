@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import authRoutes from './routes/authRoutes.js';
+import 'dotenv/config';
 
 // Configuración para obtener el directorio actual (necesario al usar módulos ES6)
 const __filename = fileURLToPath(import.meta.url);
@@ -14,7 +15,7 @@ const PORT = 3000;
 // 1. Permite que Express entienda datos de formularios (URL encoded)
 app.use(express.urlencoded({ extended: true }));
 
-// 2. Permite que Express entienda JSON (opcional pero recomendado)
+// 2. Permite que Express entienda JSON 
 app.use(express.json());
 
 // 3. Servir archivos estáticos (HTML, CSS, JS del cliente) desde la carpeta 'public'

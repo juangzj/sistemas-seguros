@@ -1,5 +1,4 @@
 import express from 'express';
-// IMPORTANTE: Añade runRawSql aquí
 import { login, register, logout, listUsers, runRawSql, searchUsers  } from '../controllers/authController.js';
 
 const router = express.Router();
@@ -11,10 +10,8 @@ router.get('/users-list', listUsers);
 
 
 
-// 🔴 Consola manual
-router.post('/ejecutar-sql', runRawSql);
 
-// 🔴 Búsqueda vulnerable
+router.post('/ejecutar-sql', runRawSql);
 router.get('/buscar', searchUsers);
 
 export default router;
